@@ -8,66 +8,39 @@ on:
   workflow_dispatch:
 
 jobs:
-
   build:
-    runs-on: ubuntu-20.04
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - aarch64_generic
+          - x86_64
+
     steps:
-
-      - name: Initialization Environment
-        env:
-          DEBIAN_FRONTEND: noninteractive
-        run: |
-          echo -e "Total CPU cores\t: $(nproc)"
-          cat /proc/cpuinfo | grep 'model name'
-          free -h
-          uname -a
-          [ -f /proc/version ] && cat /proc/version
-          [ -f /etc/issue.net ] && cat /etc/issue.net
-          [ -f /etc/issue ] && cat /etc/issue
-          ulimit -a
-      - name: Download SDK
-        run: |
-          wget https://downloads.openwrt.org/releases/22.03.2/targets/rockchip/armv8/openwrt-sdk-22.03.2-rockchip-armv8_gcc-11.2.0_musl.Linux-x86_64.tar.xz
-          xz -d openwrt-sdk-22.03.2-rockchip-armv8_gcc-11.2.0_musl.Linux-x86_64.tar.xz
-          tar -xf openwrt-sdk-22.03.2-rockchip-armv8_gcc-11.2.0_musl.Linux-x86_64.tar
-          mv openwrt-sdk-22.03.2-rockchip-armv8_gcc-11.2.0_musl.Linux-x86_64 openwrt-sdk
-      - name: Build
-        id: build
-        run: | 
-          cd openwrt-sdk
-          git clone  --depth=1 -b "${{ github.ref_name }}" https://github.com/gngpp/luci-app-xunlei.git package/luci-app-xunlei
-          ./scripts/feeds update -a && ./scripts/feeds install -a
-          echo "CONFIG_PACKAGE_luci-app-xunlei=y" >> .config
-          make defconfig
-          make package/luci-app-xunlei/compile V=s -j$(nproc)
-          tree bin/packages/
-          cd ..
-          PACKAGE_TARGET="$(find openwrt-sdk/bin/ | grep luci-app-xunlei)"
-          PACKAGE_I18N_TARGET="$(find openwrt-sdk/bin/ | grep luci-i18n-xunlei)"
-          PACKAGE_XUNLEI="$(find openwrt-sdk/bin/ | grep nas-xunlei)"
-          PACKAGE_LIBC="$(find openwrt-sdk/bin/ | grep libc6-compat)"
-          echo 'JSON_RESPONSE<<EOF' >> $GITHUB_OUTPUT
-          echo "$PACKAGE_TARGET" >> $GITHUB_OUTPUT
-          echo "$PACKAGE_I18N_TARGET" >> $GITHUB_OUTPUT
-          echo "$PACKAGE_XUNLEI" >> $GITHUB_OUTPUT
-          echo "$PACKAGE_LIBC" >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
-          echo "status=success" >> $GITHUB_OUTPUT
-      - name: Get tag
-        id: tag
-        uses: dawidd6/action-get-tag@v1
+      - uses: actions/checkout@v3
         with:
-        # Optionally strip `v` prefix
-          strip_v: false
+          fetch-depth: 0
 
-      - name: Upload to release
-        uses: softprops/action-gh-release@v1
-        if: steps.build.outputs.status == 'success' && !cancelled()
+      - name: Building packages
+        uses: openwrt/gh-action-sdk@master
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN }}
+          ARCH: ${{ matrix.arch }}
+          FEEDNAME: xunlei
+          PACKAGES: luci-app-xunlei
+          NO_REFRESH_CHECK: true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ steps.tag.outputs.tag }}
-          tag_name: ${{ steps.tag.outputs.tag }}
-          generate_release_notes: true
-          files: |
-            ${{ steps.build.outputs.JSON_RESPONSE }}
+          name: ${{ matrix.arch }}
+          path: bin/packages/${{ matrix.arch }}/xunlei/*.ipk
+
+      - name: Upload packages
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.workflow_token }}
+          allowUpdates: true
+          replacesArtifacts: true
+          artifacts: "bin/packages/${{ matrix.arch }}/xunlei/*.ipk"
