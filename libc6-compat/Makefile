@@ -34,4 +34,18 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/$(ARCH)/libc6_$(ARCH).so $(1)/usr/libc6-compat/libc6.so
 endef
 
+define Package/$(PKG_NAME)/postrm
+#!/bin/sh
+ARCH=$(uname -m)
+if [ "$ARCH" = "aarch64" ]; then
+  LD=ld-linux-aarch64.so.1
+else
+  LD=ld-linux-x86-64.so.2
+fi
+[ -L "/lib/$LD" ] && rm -f /lib/$LD
+[ $(grep -qs '/libc6' /proc/mounts) ] && umount /libc6
+rm -rf /libc6
+exit 0
+endef
+
 $(eval $(call BuildPackage,$(PKG_NAME)))
