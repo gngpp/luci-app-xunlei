@@ -32,8 +32,6 @@ endef
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/usr/libc6-compat
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/$(ARCH)/libc6_$(ARCH).so $(1)/usr/libc6-compat/libc6.so
-endif
-
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
