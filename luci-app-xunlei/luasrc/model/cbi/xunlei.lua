@@ -1,7 +1,7 @@
 local m, s
 
 m = Map("xunlei", translate("Xunlei"))
-m.description = translate("NAS Xunlei DSM 7.x Beta Version Invitation code (3H9F7Y6D)")
+m.description = translate("NAS Xunlei DSM 7.x Beta Version. Invitation code (3H9F7Y6D)")
 
 m:section(SimpleSection).template = "xunlei/xunlei_status"
 
