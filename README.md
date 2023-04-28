@@ -1,9 +1,6 @@
 # NAS Xunlei Beta - OpenWrt Ported Version
 
-Only support **aarch64_generic** platform.
-
-原项目：https://github.com/sbwml/luci-app-xunlei
-### Invitation code: https://docs.qq.com/form/page/DQUJXZUdtRlNGWkxr
+Only support **x86_64**/**aarch64_generic** platform.
 
 ------------
 
